@@ -40,4 +40,3 @@ class PrecipitationPage(QWidget):
         )
         layout.addWidget(self.intensity)
         layout.addStretch()
-

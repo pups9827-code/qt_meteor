@@ -1,70 +1,33 @@
-import sys
+from PyQt6.QtWidgets import QMainWindow
 
-from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QPushButton, QVBoxLayout, QWidget, QStackedWidget
-from ui.pages.precipitation import PrecipitationPage
+from core.weather_worker import WeatherWorker
+from ui.pages.home import HomePage
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
         self.setWindowTitle("Журнал погоды")
         self.resize(1000, 650)
-        central = QWidget()
-        layout = QVBoxLayout(central)
 
+        self.home = HomePage()
+        self.setCentralWidget(self.home)
 
-        layout.addWidget(QLabel("Журнал погоды"))
-        open_report = QPushButton("Заполнить отчёт")
-        layout.addWidget(open_report)
-        layout.addStretch()
+        self.home.forecast_label.setText("Загружаем прогноз...")
+        self.weather_worker = WeatherWorker()
+        self.weather_worker.loaded.connect(self.show_forecast)
+        self.weather_worker.failed.connect(self.show_weather_error)
+        self.weather_worker.start()
 
-        report = QWidget()
-        report_layout = QVBoxLayout(report)
-
-        report_layout.addWidget(QLabel("Выбери показатель"))
-        for name in ("темпиратура",
-                     "Ветер",
-                     "Давление",
-                     "Влажность",
-                     "Уф-индекс",
-                     "облачность",
-                     "осадки",
-                     "заметки",):
-            botton = QPushButton(name)
-            report_layout.addWidget(botton)
-            if name == "осадки":
-                botton.clicked.connect(
-                    lambda: self.pages.setCurrentWidget(
-                        self.precipitation_page
-                    )
-                )
-        back_botton = QPushButton("Назад")
-        report_layout.addWidget(back_botton)
-        report_layout.addStretch()
-
-        self.pages = QStackedWidget()
-        self.pages.addWidget(central)
-        self.pages.addWidget(report)
-        self.precipitation_page = PrecipitationPage()
-        self.pages.addWidget(self.precipitation_page)
-
-        back_to_report = QPushButton("Назад к показателям")
-        self.precipitation_page.layout().insertWidget(0, back_to_report)
-
-        back_to_report.clicked.connect(
-            lambda: self.pages.setCurrentWidget(report)
+    def show_forecast(self, data):
+        hourly = data["hourly"]
+        time = hourly["time"][0].replace("T", " ")
+        temperature = hourly["temperature_2m"][0]
+        self.home.forecast_label.setText(
+            f"Прогноз на {time}\n"
+            f"Температура: {temperature} °C\n"
+            f"Часовой пояс: {data['timezone']}"
         )
-        self.setCentralWidget(self.pages)
 
-        open_report.clicked.connect(
-            lambda: self.pages.setCurrentWidget(report))
-
-        back_botton.clicked.connect(
-            lambda: self.pages.setCurrentWidget(central))
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
+    def show_weather_error(self, message):
+        self.home.forecast_label.setText(f"Не удалось загрузить прогноз:\n{message}")

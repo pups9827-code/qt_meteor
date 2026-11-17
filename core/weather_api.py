@@ -1,17 +1,27 @@
-import requests  # билблиотека которая отпраляет запрос в интерент
+import requests
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
 
-params = {
-    "latitude" : 55.664538,
-    "longitude": 37.453783,
-    "hourly": "temperature_2m",
-}
 
-response = requests.get(API_URL, params=params, timeout=20)
-print(response.status_code) # если 200 то успешно
+def get_forecast(latitude, longitude):
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "hourly": [
+            "temperature_2m",       # Температура
+            "wind_speed_10m",       # Ветер
+            "surface_pressure",     # Давление
+            "relative_humidity_2m", # Влажность
+            "uv_index",             # УФ-индекс
+            "cloud_cover",          # Облачность
+            "precipitation",        # Осадки
+        ],
+        "wind_speed_unit": "ms",    # Ветер
+        "forecast_hours": 24,
+        "timezone": "auto",
+    }
 
-data = response.json() # преобразует json ответ в python ответ
+    response = requests.get(API_URL, params=params, timeout=20)
+    response.raise_for_status()
 
-print(data["hourly"]["time"][0])
-print(data["hourly"]["temperature_2m"][0])
+    return response.json()
